@@ -23,12 +23,15 @@ server_loop(Socket) ->
 
 
 % TODO 如何同时关闭两个链接
+% TODO Close 时，可以发送消息通知另一个进程来关闭socket
+% TODO 收到消息时，可以把数据发给另一个进程，让另一个进度send，这样就只是在一个进程里面操作一个socket
+% TODO 两个线程同时 read或者同时write 会出错
 tunnel(Connection, To)->
     receive
         {tcp, Connection, Data} ->
             gen_tcp:send(To, Data),
             tunnel(Connection, To);
-	    {tcp_closed, Connection} ->
+        {tcp_closed, Connection} ->
             gen_tcp:close(Connection),
             gen_tcp:close(To)
 	        % io:format("tunnel closed ~p~n", [Connection])
@@ -77,6 +80,7 @@ request(Connection)->
 
 
 	    {tcp_closed, Connection} ->
+            gen_tcp:close(Connection),
 	        io:format("Connection closed ~p~n", [Connection])
     end.
 
@@ -89,6 +93,7 @@ echo_loop(Connection) ->
             gen_tcp:send(Connection, Resp),
             request(Connection);
 	    {tcp_closed, Connection} ->
+            gen_tcp:close(Connection),
             io:format("Connection closed ~p~n", [Connection])
     end.
 
